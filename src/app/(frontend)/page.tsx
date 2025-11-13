@@ -4,24 +4,33 @@ import CreatePostForm from './CreatePostForm'
 import GreetingClient from './GreetingClient'
 import ProtectedContent from './ProtectedContent'
 
-function extractPlainText(value: any): string {
+type RichTextLike = string | RichTextNode | RichTextLike[]
+
+type RichTextNode = {
+  text?: string
+  children?: RichTextLike[]
+}
+
+function extractPlainText(value: RichTextLike | null | undefined): string {
   if (!value) return ''
 
   if (typeof value === 'string') return value
 
   if (Array.isArray(value)) {
     return value
-      .map((item) => extractPlainText(item))
+      .map((item: RichTextLike) => extractPlainText(item))
       .filter(Boolean)
       .join(' ')
   }
 
   if (typeof value === 'object') {
-    if (typeof value.text === 'string') return value.text
+    const node = value as RichTextNode
 
-    if (Array.isArray(value.children)) {
-      return value.children
-        .map((child) => extractPlainText(child))
+    if (typeof node.text === 'string') return node.text
+
+    if (Array.isArray(node.children)) {
+      return node.children
+        .map((child: RichTextLike) => extractPlainText(child))
         .filter(Boolean)
         .join(' ')
     }

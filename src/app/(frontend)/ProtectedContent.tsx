@@ -31,7 +31,7 @@ export default function ProtectedContent({ children }: { children: React.ReactNo
       } else {
         router.push('/login')
       }
-    } catch (e) {
+    } catch (_error) {
       router.push('/login')
     }
   }, [router])

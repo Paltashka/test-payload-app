@@ -4,11 +4,31 @@ import CreatePostForm from './CreatePostForm'
 import GreetingClient from './GreetingClient'
 import ProtectedContent from './ProtectedContent'
 
+type RichTextNode = {
+  text?: unknown
+  children?: unknown[]
+}
+
 type RichTextLike = string | RichTextNode | RichTextLike[]
 
-type RichTextNode = {
-  text?: string
-  children?: RichTextLike[]
+type UserSummary = {
+  id: string
+  email?: string | null
+}
+
+type CategorySummary = {
+  id: string
+  title?: string | null
+  slug?: string | null
+}
+
+type PostSummary = {
+  id: string
+  title: string
+  owner?: string | UserSummary | null
+  categories?: (string | CategorySummary | null)[] | string | null
+  content?: { root?: unknown } | null
+  createdAt: string
 }
 
 function extractPlainText(value: RichTextLike | null | undefined): string {
@@ -18,7 +38,7 @@ function extractPlainText(value: RichTextLike | null | undefined): string {
 
   if (Array.isArray(value)) {
     return value
-      .map((item: RichTextLike) => extractPlainText(item))
+      .map((item) => extractPlainText(item as RichTextLike))
       .filter(Boolean)
       .join(' ')
   }
@@ -30,13 +50,18 @@ function extractPlainText(value: RichTextLike | null | undefined): string {
 
     if (Array.isArray(node.children)) {
       return node.children
-        .map((child: RichTextLike) => extractPlainText(child))
+        .map((child) => extractPlainText(child as RichTextLike))
         .filter(Boolean)
         .join(' ')
     }
   }
 
   return ''
+}
+
+function extractFromContent(content: PostSummary['content']): string {
+  if (!content || typeof content !== 'object') return ''
+  return extractPlainText(content.root as RichTextLike).trim()
 }
 
 function formatDate(dateString: string) {
@@ -69,95 +94,105 @@ function formatDate(dateString: string) {
 
 export default async function HomePage() {
   const payload = await getPayload({ config: configPromise })
-  const posts = await payload.find({
-    collection: 'posts' as any,
+  const postsResult = await payload.find({
+    collection: 'posts',
     depth: 2,
   })
 
-  const categories = await payload.find({
-    collection: 'categories' as any,
+  const categoriesResult = await payload.find({
+    collection: 'categories',
     limit: 100,
     sort: 'title',
   })
 
-  const usersMap = new Map()
-  if (posts.docs.length > 0) {
-    const ownerIds = posts.docs
-      .map((post: any) => {
+  const posts = postsResult.docs as PostSummary[]
+  const categories = categoriesResult.docs as CategorySummary[]
+
+  const usersMap = new Map<string, UserSummary>()
+  if (posts.length > 0) {
+    const ownerIds = posts
+      .map((post) => {
         if (typeof post.owner === 'string') return post.owner
-        if (typeof post.owner === 'object' && post.owner?.id) return post.owner.id
+        if (post.owner && typeof post.owner === 'object' && 'id' in post.owner) {
+          return (post.owner as UserSummary).id
+        }
         return null
       })
       .filter(Boolean) as string[]
 
     if (ownerIds.length > 0) {
       const uniqueIds = [...new Set(ownerIds)]
-      const users = await payload.find({
-        collection: 'users' as any,
-        where: { id: { in: uniqueIds } } as any,
+      const usersResult = await payload.find({
+        collection: 'users',
+        where: { id: { in: uniqueIds } },
         limit: 100,
       })
 
-      users.docs.forEach((user: any) => {
+      const users = usersResult.docs as UserSummary[]
+
+      users.forEach((user) => {
         usersMap.set(user.id, user)
       })
     }
   }
+
+  const categoriesById = new Map<string, CategorySummary>(categories.map((cat) => [cat.id, cat]))
+  const formCategories = categories.map((cat) => ({
+    id: cat.id,
+    title: cat.title ?? cat.slug ?? 'Untitled category',
+    slug: cat.slug ?? undefined,
+  }))
 
   return (
     <div className="page-container">
       <GreetingClient />
       <ProtectedContent>
         <div className="form-card">
-          <CreatePostForm categories={categories.docs || []} />
+          <CreatePostForm categories={formCategories} />
         </div>
 
         <div className="posts-section">
           <h2 className="posts-title">Old Posts</h2>
           <ul className="posts-list">
-            {posts.docs.map((post: any) => {
-              let owner = null
+            {posts.map((post) => {
+              let owner: UserSummary | null = null
               if (post.owner) {
-                if (typeof post.owner === 'object' && post.owner !== null && post.owner.id) {
-                  owner = post.owner
+                if (typeof post.owner === 'object' && post.owner !== null && 'id' in post.owner) {
+                  owner = post.owner as UserSummary
                 } else if (typeof post.owner === 'string') {
                   owner = usersMap.get(post.owner) || null
                 }
               }
 
-              let postCategories: any[] = []
+              let postCategories: CategorySummary[] = []
               if (post.categories) {
                 if (Array.isArray(post.categories)) {
                   postCategories = post.categories
-                    .map((cat: any) => {
-                      if (typeof cat === 'object' && cat !== null && cat.id) {
-                        return cat
+                    .map((cat) => {
+                      if (typeof cat === 'object' && cat !== null && 'id' in cat) {
+                        return cat as CategorySummary
                       }
                       if (typeof cat === 'string') {
-                        const found = categories.docs.find((c: any) => c.id === cat)
+                        const found = categoriesById.get(cat)
                         return found || null
                       }
                       return null
                     })
-                    .filter((cat: any) => cat !== null && cat !== undefined)
+                    .filter((cat): cat is CategorySummary => cat !== null && cat !== undefined)
                 } else if (typeof post.categories === 'string') {
-                  const found = categories.docs.find((c: any) => c.id === post.categories)
+                  const found = categoriesById.get(post.categories)
                   if (found) postCategories = [found]
                 }
               }
 
-              const contentText = extractPlainText(post.content).trim()
+              const contentText = extractFromContent(post.content)
 
               return (
                 <li key={post.id} className="post-card">
                   <div className="post-header">
                     <div style={{ flex: 1 }}>
                       <h3 className="post-title">{post.title}</h3>
-                      {owner && (
-                        <p className="post-meta">
-                          by {owner.email || owner.name || 'Unknown user'}
-                        </p>
-                      )}
+                      {owner && <p className="post-meta">by {owner.email || 'Unknown user'}</p>}
                       {!owner && <p className="post-meta">by Unknown user</p>}
                       <p className="post-meta">{formatDate(post.createdAt)}</p>
                     </div>
@@ -165,8 +200,8 @@ export default async function HomePage() {
                   {contentText && <p className="post-content">{contentText}</p>}
                   {postCategories.length > 0 && (
                     <div className="post-categories">
-                      {postCategories.map((cat: any) => (
-                        <span key={cat.id || cat} className="category-tag">
+                      {postCategories.map((cat) => (
+                        <span key={cat.id} className="category-tag">
                           {cat.title || cat.slug || 'Unknown'}
                         </span>
                       ))}

@@ -1,6 +1,6 @@
-import { CollectionConfig } from 'payload'
+import payload from 'payload'
 
-export const Categories: CollectionConfig = {
+export const Categories = {
   slug: 'categories',
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -10,7 +10,7 @@ export const Categories: CollectionConfig = {
       name: 'posts',
       label: 'Posts',
       type: 'relationship',
-      relationTo: 'posts' as any,
+      relationTo: 'posts',
       hasMany: true,
       admin: {
         readOnly: true,
@@ -22,6 +22,6 @@ export const Categories: CollectionConfig = {
       relationTo: 'users',
     },
   ],
-}
+} satisfies typeof payload['collections'][string]
 
 export default Categories

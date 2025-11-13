@@ -1,6 +1,6 @@
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
 import { NextResponse } from 'next/server'
+import { getPayload } from 'payload'
 
 export const POST = async (req: Request) => {
   try {
@@ -8,7 +8,7 @@ export const POST = async (req: Request) => {
 
     const payload = await getPayload({ config: configPromise })
 
-    const result = await (payload as any).login({
+    const result = await payload.login({
       collection: 'users',
       data: { email, password },
     })

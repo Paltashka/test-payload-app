@@ -1,16 +1,16 @@
-import { CollectionConfig } from 'payload';
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import payload from 'payload'
 
-export const Posts: CollectionConfig = {
+export const Posts = {
   slug: 'posts',
   fields: [
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true },
-  { name: 'content', type: 'richText', editor: lexicalEditor() },
+    { name: 'content', type: 'richText', editor: lexicalEditor() },
     {
       name: 'categories',
       type: 'relationship',
-      relationTo: 'categories' as any,
+      relationTo: 'categories',
       hasMany: true,
     },
     {
@@ -19,6 +19,6 @@ export const Posts: CollectionConfig = {
       relationTo: 'users',
     },
   ],
-};
+} satisfies typeof payload['collections'][string]
 
-export default Posts;
+export default Posts

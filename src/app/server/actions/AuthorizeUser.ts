@@ -7,16 +7,15 @@ export async function authorizeUser({ email, password }: { email: string; passwo
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // payload.login may not be typed in this environment, so use any to call it
-    const result = await (payload as any).login({
+    const result = await payload.login({
       collection: 'users',
       data: { email, password },
     })
 
     // result usually contains { user, token }
     return result
-  } catch (e) {
-    console.error('authorizeUser error', e)
+  } catch (error) {
+    console.error('authorizeUser error', error)
     return null
   }
 }

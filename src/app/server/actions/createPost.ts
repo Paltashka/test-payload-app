@@ -1,22 +1,38 @@
-'use server';
+'use server'
 
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-export async function createPost(data: { title: string; content: string; categories?: string[]; userEmail?: string | null }) {
+type CreatePostInput = {
+  title: string
+  content: string
+  categories?: string[]
+  userEmail?: string | null
+}
+
+type UserDocument = {
+  id: string
+}
+
+type PostDocument = {
+  id: string
+}
+
+export async function createPost(data: CreatePostInput) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    let ownerId: string | undefined = undefined
+    let ownerId: string | undefined
     if (data.userEmail) {
       const users = await payload.find({
-        collection: 'users' as any,
-        where: { email: { equals: data.userEmail } } as any,
+        collection: 'users',
+        where: { email: { equals: data.userEmail } },
         limit: 1,
-      } as any)
+      })
 
-      if (users.docs.length > 0) {
-        ownerId = users.docs[0].id
+      const userDocs = users.docs as UserDocument[]
+      if (userDocs.length > 0) {
+        ownerId = userDocs[0].id
       }
     }
 
@@ -35,19 +51,20 @@ export async function createPost(data: { title: string; content: string; categor
     let i = 0
     while (true) {
       const existing = await payload.find({
-        collection: 'posts' as any,
-        where: { slug: { equals: slug } } as any,
+        collection: 'posts',
+        where: { slug: { equals: slug } },
         depth: 0,
-      } as any)
+      })
 
-      if (!existing || (existing && existing.totalDocs === 0)) break
+      const postDocs = existing.docs as PostDocument[]
+      if (!existing || postDocs.length === 0) break
 
       i += 1
       slug = `${baseSlug}-${i}`
     }
 
     await payload.create({
-      collection: 'posts' as any,
+      collection: 'posts',
       data: {
         title: data.title,
         slug,
@@ -55,9 +72,9 @@ export async function createPost(data: { title: string; content: string; categor
         categories: data.categories && data.categories.length ? data.categories : undefined,
         owner: ownerId,
       },
-    } as any)
-  } catch (e) {
-    console.error(e)
-    throw e
+    })
+  } catch (error) {
+    console.error(error)
+    throw error
   }
 }

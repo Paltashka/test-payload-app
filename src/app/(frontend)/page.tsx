@@ -4,6 +4,9 @@ import CreatePostForm from './CreatePostForm'
 import GreetingClient from './GreetingClient'
 import ProtectedContent from './ProtectedContent'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 type RichTextNode = {
   text?: unknown
   children?: unknown[]

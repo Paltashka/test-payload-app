@@ -538,6 +538,13 @@ svg {
   margin: 0.5rem 0;
 }
 
+.post-content {
+  margin: 1rem 0 0 0;
+  color: rgb(45, 45, 45);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .post-categories {
   display: flex;
   gap: 0.5rem;

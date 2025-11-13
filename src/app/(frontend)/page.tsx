@@ -4,6 +4,32 @@ import CreatePostForm from './CreatePostForm'
 import GreetingClient from './GreetingClient'
 import ProtectedContent from './ProtectedContent'
 
+function extractPlainText(value: any): string {
+  if (!value) return ''
+
+  if (typeof value === 'string') return value
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => extractPlainText(item))
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  if (typeof value === 'object') {
+    if (typeof value.text === 'string') return value.text
+
+    if (Array.isArray(value.children)) {
+      return value.children
+        .map((child) => extractPlainText(child))
+        .filter(Boolean)
+        .join(' ')
+    }
+  }
+
+  return ''
+}
+
 function formatDate(dateString: string) {
   const date = new Date(dateString)
   const months = [
@@ -111,6 +137,8 @@ export default async function HomePage() {
                 }
               }
 
+              const contentText = extractPlainText(post.content).trim()
+
               return (
                 <li key={post.id} className="post-card">
                   <div className="post-header">
@@ -125,6 +153,7 @@ export default async function HomePage() {
                       <p className="post-meta">{formatDate(post.createdAt)}</p>
                     </div>
                   </div>
+                  {contentText && <p className="post-content">{contentText}</p>}
                   {postCategories.length > 0 && (
                     <div className="post-categories">
                       {postCategories.map((cat: any) => (

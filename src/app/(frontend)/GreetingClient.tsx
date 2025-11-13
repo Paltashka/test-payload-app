@@ -1,12 +1,10 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function GreetingClient() {
   const [user, setUser] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     try {
@@ -29,16 +27,16 @@ export default function GreetingClient() {
         window.history.replaceState({}, document.title, url.pathname + url.search)
         setIsChecking(false)
       } else {
-        router.push('/login')
+        window.location.href = '/login'
       }
-    } catch (e) {
-      router.push('/login')
+    } catch (_error) {
+      window.location.href = '/login'
     }
-  }, [router])
+  }, [])
 
   function handleLogout() {
     sessionStorage.removeItem('user')
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   if (isChecking || !user) {
